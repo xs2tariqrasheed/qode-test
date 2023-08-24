@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
-  req: any,
+  req: NextApiRequest,
   res: NextApiResponse
 ): Promise<void> {
   if (req.method === "POST") {
