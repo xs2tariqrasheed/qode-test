@@ -39,9 +39,9 @@ export default function Home() {
   const initialRef = React.useRef(null);
   const finalRef = React.useRef(null);
 
-  const fetchData = async (shouldLoading: boolean) => {
+  const fetchData = async () => {
     try {
-      setLoading(shouldLoading);
+      setLoading(false);
       const response = await fetch("/api/images");
       const data = await response.json();
       setImages(data?.data);
@@ -53,8 +53,8 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchData(true);
-  }, []);
+    fetchData();
+  }, [images]);
 
   const handleModelClose = () => {
     setSelectedImage(null);
@@ -63,32 +63,30 @@ export default function Home() {
 
   const handleSave = async () => {
     setSubmitting(true);
-    const formData = new FormData();
-
-    if (selectedImage?.file) {
-      formData.set("image", selectedImage.file);
-    }
-
-    if (selectedImage?.comment) {
-      formData.set("comment", selectedImage.comment);
-    }
+    const data = {
+      id: selectedImage?.preview, // as base64 image url
+      comment: selectedImage?.comment,
+    };
 
     try {
       await fetch("/api/upload", {
         method: "POST",
-        body: formData,
+        body: JSON.stringify(data),
+        headers: new Headers({
+          "Content-Type": "application/json",
+        }),
       });
     } catch (error) {
       console.error("Error uploading image:", error);
     }
-    await fetchData(false);
+    await fetchData();
     setSubmitting(false);
     handleModelClose();
   };
 
   return (
     <>
-      {images?.length > 0 && (
+      {images?.length > 0 ? (
         <div style={{ padding: 40 }}>
           <Heading>Images</Heading>
           <SimpleGrid mt="8" columns={5} spacing={10}>
@@ -105,7 +103,6 @@ export default function Home() {
             >
               <AddIcon />
             </Flex>
-
             {images?.map((image) => (
               <Box
                 key={image.id}
@@ -117,7 +114,7 @@ export default function Home() {
                 <Image
                   width={"100%"}
                   objectFit="cover"
-                  src={`http://localhost:3000/${image?.id}`}
+                  src={`${image?.id}`}
                   alt="Image"
                 />
                 <Text mt="2" color="gray.600">
@@ -127,6 +124,23 @@ export default function Home() {
             ))}
           </SimpleGrid>
         </div>
+      ) : (
+        <SimpleGrid mt="8" columns={5} spacing={10}>
+          <Flex
+            onClick={onOpen}
+            borderWidth="1px"
+            borderRadius="lg"
+            m="4"
+            height={320}
+            boxShadow="md"
+            cursor={"pointer"}
+            minWidth="max-content"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <AddIcon />
+          </Flex>
+        </SimpleGrid>
       )}
       <Modal
         onOverlayClick={handleModelClose}
@@ -170,7 +184,7 @@ export default function Home() {
             <Button
               onClick={handleSave}
               isDisabled={
-                loading || !selectedImage?.file || !selectedImage.comment
+                loading || !selectedImage?.preview || !selectedImage.comment
               }
               isLoading={loading}
               colorScheme="blue"

@@ -1,12 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 
-(globalThis as any).images = [
-  {
-    id: "images/example.png",
-    comment: "Test comment",
-  },
-];
-
+(globalThis as any).images = [];
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse

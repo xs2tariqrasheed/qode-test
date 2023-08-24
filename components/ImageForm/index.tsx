@@ -31,18 +31,18 @@ const ImageForm: React.FC<ImageFormProps> = ({ onSelect, selectedImage }) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = (e) => {
+        const base64Url = e.target?.result as string;
         onSelect({
           ...selectedImage,
           file: file,
-          preview: reader.result as string,
+          preview: base64Url,
         });
       };
       reader.readAsDataURL(file);
     }
   };
 
-  console.log(selectedImage);
   return (
     <Box>
       <FormControl>
