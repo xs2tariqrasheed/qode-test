@@ -1,8 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
-import React, { useState } from "react";
+import React from "react";
 import {
   Box,
-  Button,
   Flex,
   FormControl,
   FormLabel,
@@ -12,21 +10,21 @@ import {
 import { AttachmentIcon } from "@chakra-ui/icons";
 
 export interface SelectedImageProps {
-  file: File;
-  preview: string;
-  comment: string;
+  file: File | null;
+  preview: string | null;
+  comment: string | null;
 }
 
-interface ImageUploadProps {
+interface ImageFormProps {
   onSelect: (data: SelectedImageProps) => void;
-  isSelected: boolean;
+  selectedImage: SelectedImageProps;
 }
-const ImageUpload: React.FC<ImageUploadProps> = ({ onSelect, isSelected }) => {
-  const [comment, setComment] = useState<string>("");
-
+const ImageForm: React.FC<ImageFormProps> = ({ onSelect, selectedImage }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    let inputValue = e.target.value;
-    setComment(inputValue);
+    onSelect({
+      ...selectedImage,
+      comment: e.target.value,
+    });
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,20 +33,21 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onSelect, isSelected }) => {
       const reader = new FileReader();
       reader.onload = () => {
         onSelect({
+          ...selectedImage,
           file: file,
           preview: reader.result as string,
-          comment: comment,
         });
       };
       reader.readAsDataURL(file);
     }
   };
 
+  console.log(selectedImage);
   return (
     <Box>
       <FormControl>
         <FormLabel />
-        {!isSelected && (
+        {!selectedImage?.file && (
           <>
             <Input
               type="file"
@@ -76,7 +75,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onSelect, isSelected }) => {
         )}
         <Textarea
           mt="4"
-          value={comment}
           onChange={handleInputChange}
           placeholder="Write a comment here"
         />
@@ -85,4 +83,4 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onSelect, isSelected }) => {
   );
 };
 
-export default ImageUpload;
+export default ImageForm;

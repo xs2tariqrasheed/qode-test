@@ -15,19 +15,16 @@ import {
   SimpleGrid,
   Flex,
   Alert,
-  AlertIcon,
+  Spinner,
 } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 
-import Loader from "@/components/Loader";
-import ImageUpload, { SelectedImageProps } from "@/components/ImageUpload";
+import ImageForm, { SelectedImageProps } from "@/components/ImageForm";
 
-import { AddIcon, DeleteIcon } from "@chakra-ui/icons";
-import { getAllImageData, isValidImageUrl } from "@/utils/helper";
+import { AddIcon } from "@chakra-ui/icons";
 
 interface ImageData {
   id: number;
-  imageUrl: string;
   comment: string;
 }
 
@@ -35,53 +32,65 @@ export default function Home() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [images, setImages] = useState<ImageData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [isImageSelected, setIsImageSelected] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] =
     useState<SelectedImageProps | null>();
 
   const initialRef = React.useRef(null);
   const finalRef = React.useRef(null);
-  const imageData = getAllImageData();
+
+  const fetchData = async (shouldLoading: boolean) => {
+    try {
+      setLoading(shouldLoading);
+      const response = await fetch("/api/images");
+      const data = await response.json();
+      setImages(data?.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/get-all-images")
-      .then((response) => response.json())
-      .then((data) => setImages(data?.images))
-      .catch((error) => console.error("Error fetching data:", error))
-      .finally(() => setLoading(false));
+    fetchData(true);
   }, []);
 
   const handleModelClose = () => {
     setSelectedImage(null);
-    setIsImageSelected(false);
+    onClose();
   };
 
   const handleSave = async () => {
-    const imageUrl = selectedImage?.preview;
-    const comment = selectedImage?.comment;
+    setSubmitting(true);
+    const formData = new FormData();
+
+    if (selectedImage?.file) {
+      formData.set("image", selectedImage.file);
+    }
+
+    if (selectedImage?.comment) {
+      formData.set("comment", selectedImage.comment);
+    }
 
     try {
-      const res = await fetch("/api/upload-Image", {
+      await fetch("/api/upload", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ imageUrl, comment }),
+        body: formData,
       });
-      const data = await res.json();
-      console.log("Post API Response", data);
     } catch (error) {
       console.error("Error uploading image:", error);
     }
+    await fetchData(false);
+    setSubmitting(false);
+    handleModelClose();
   };
 
   return (
     <>
-      <Loader isLoading={loading} />;
       {images?.length > 0 && (
         <div style={{ padding: 40 }}>
-          <Heading>Image Gallery</Heading>
+          <Heading>Images</Heading>
           <SimpleGrid mt="8" columns={5} spacing={10}>
             <Flex
               onClick={onOpen}
@@ -96,6 +105,7 @@ export default function Home() {
             >
               <AddIcon />
             </Flex>
+
             {images?.map((image) => (
               <Box
                 key={image.id}
@@ -103,13 +113,12 @@ export default function Home() {
                 borderRadius="lg"
                 p="4"
                 boxShadow="md"
-                cursor={"pointer"}
               >
                 <Image
                   width={"100%"}
                   objectFit="cover"
-                  src={image?.imageUrl}
-                  alt={image?.comment}
+                  src={`http://localhost:3000/${image?.id}`}
+                  alt="Image"
                 />
                 <Text mt="2" color="gray.600">
                   {image?.comment}
@@ -124,63 +133,52 @@ export default function Home() {
         initialFocusRef={initialRef}
         finalFocusRef={finalRef}
         isOpen={isOpen}
-        onClose={() => {
-          handleModelClose();
-          onClose();
-        }}
+        onClose={handleModelClose}
         isCentered
       >
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Add Image</ModalHeader>
+          <ModalHeader>Add Form</ModalHeader>
           <ModalCloseButton />
+          {(!selectedImage?.file || !selectedImage.comment) && (
+            <Alert status="warning">
+              Please select an image and input the comment.
+            </Alert>
+          )}
           {selectedImage?.preview && (
             <Box m="4" position="relative">
-              <DeleteIcon
-                onClick={handleModelClose}
-                height={6}
-                width={6}
-                color={"red"}
-                position="absolute"
-                top={0}
-                cursor="pointer"
-                right={0}
-              />
               <Image
                 width="100%"
                 objectFit="cover"
                 src={selectedImage?.preview}
-                alt={selectedImage?.comment}
+                alt={selectedImage?.comment || ""}
               />
             </Box>
           )}
           <ModalBody pb={6}>
-            <ImageUpload
-              onSelect={(selected) => {
+            <ImageForm
+              onSelect={(selected: SelectedImageProps | null) => {
                 setSelectedImage(selected);
-                setIsImageSelected(true);
               }}
-              isSelected={isImageSelected}
+              selectedImage={
+                selectedImage || { file: null, preview: null, comment: null }
+              }
             />
           </ModalBody>
+
           <ModalFooter>
             <Button
               onClick={handleSave}
-              isDisabled={loading || !isImageSelected}
+              isDisabled={
+                loading || !selectedImage?.file || !selectedImage.comment
+              }
               isLoading={loading}
               colorScheme="blue"
               mr={3}
             >
-              Save
+              {submitting ? <Spinner size="sm" /> : "Save"}
             </Button>
-            <Button
-              onClick={() => {
-                onClose();
-                handleModelClose();
-              }}
-            >
-              Cancel
-            </Button>
+            <Button onClick={handleModelClose}>Cancel</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
